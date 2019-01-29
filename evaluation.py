@@ -1,13 +1,24 @@
 import pandas as pd
 import numpy as np
 import os
+from sklearn.metrics import r2_score
 
 """
     A seperate program that measures the performance
 """
 
-def get_rmse_mae_mape(df, ground_truth, prediction_result):
-    return get_rmse(df, ground_truth, prediction_result), get_mae(df, ground_truth, prediction_result), get_mape(df, ground_truth, prediction_result)
+def get_all_metrics(df, ground_truth, prediction_result):
+    result={}
+    result["RMSE"]=get_rmse(df, ground_truth, prediction_result)
+    result["MAE"]=get_mae(df, ground_truth, prediction_result)
+    result["MAPE"]=get_mape(df, ground_truth, prediction_result)
+    result["ME"]=get_me(df, ground_truth, prediction_result)
+    result["R^2"]=get_r_square(df, ground_truth, prediction_result)
+    return result
+
+def get_r_square(df, ground_truth, prediction_result):
+    df=df.dropna(axis=0)
+    return r2_score(df[ground_truth], df[prediction_result])
 
 def get_sum_of_difference(df, ground_truth, prediction_result):
     return (df[prediction_result]-df[ground_truth]).sum()
