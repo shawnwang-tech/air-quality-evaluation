@@ -14,7 +14,11 @@ def get_all_metrics(df, ground_truth, prediction_result):
     result["MAPE"]=get_mape(df, ground_truth, prediction_result)
     result["ME"]=get_me(df, ground_truth, prediction_result)
     result["R^2"]=get_r_square(df, ground_truth, prediction_result)
+    result["missing rate"]=get_missing_rate(df, ground_truth, prediction_result)
     return result
+
+def get_missing_rate(df, ground_truth, prediction_result):
+    return 1-df[ground_truth].count()/df.shape[0]
 
 def get_r_square(df, ground_truth, prediction_result):
     df=df.dropna(axis=0)
