@@ -5,11 +5,13 @@ import os
 
 
 def error_analysis(file_path, date_name="timestamp", prediction_name="prediction_value",
-                   ground_truth_name="ground_truth", sensor_name="location"):
+                   ground_truth_name="ground_truth", sensor_name="location", drop_stations=None):
     if date_name:
         df = pd.read_csv(file_path, parse_dates=[date_name], infer_datetime_format=True)
     else:
         df = pd.read_csv(file_path)
+    if drop_stations:
+        df.drop(df[df[sensor_name].map(lambda x: x in drop_stations)].index, inplace=True)
 
     metrics = get_all_metrics(df, ground_truth_name, prediction_name)
     for metric in metrics:
@@ -45,8 +47,9 @@ def error_analysis(file_path, date_name="timestamp", prediction_name="prediction
         text_path = os.path.join(path_to_save, file_name + ".txt")
 
         f.savefig(picture_path, bbox_inches="tight")
-        with open(text_path, "w") as f:
-            f.write(str(metrics))
+        with open(text_path, "w") as file:
+            file.write(str(metrics))
+        plt.close(f)
 
 
 if __name__ == '__main__':
@@ -107,31 +110,55 @@ if __name__ == '__main__':
     #                prediction_name="prediction_value",
     #                date_name="timestamp")
 
-    dirs = ['utah_1711_1806_validation_ppa_epa_pm25_w_6hr',
-            'utah_1711_1806_validation_ppa_epa_pm25_6hr',
-            'utah_1711_1806_validation_ppa_ppa_pm25_6hr',
-            'utah_1711_1806_validation_ppa_ppa_pm25_w_6hr',
-            'utah_1711_180601_validation_ppa_epa_pm25_w'
-            ]
+    # dirs = ['utah_1711_1806_validation_ppa_epa_pm25_w_6hr',
+    #         'utah_1711_1806_validation_ppa_epa_pm25_6hr',
+    #         'utah_1711_1806_validation_ppa_ppa_pm25_6hr',
+    #         'utah_1711_1806_validation_ppa_ppa_pm25_w_6hr',
+    #         'utah_1711_180601_validation_ppa_epa_pm25_w'
+    #         ]
 
-    # working_dir = os.getcwd()
-    # for d in dirs:
-    #     p = os.path.join(working_dir, d)
-    #     months = os.listdir(p)
-    #     months= list(filter(lambda x: not( x.endswith(".txt") or x.endswith(".png") or x.endswith(".csv")), months ) )
-    #     months.sort()
-    #     for month in months:
-    #         tmp_path = os.path.join(p, month, "prediction.csv")
-    #         print(d)
-    #         error_analysis(tmp_path, date_name="date_observed",
-    #                        prediction_name="predictions", ground_truth_name="value",
-    #                        sensor_name="station_id")
+    dirs = ['utah_1711_180601_validation_ppa_epa_pm25_w',
+            'utah_1711_1806_validation_ppa_epa_pm25_12hr',
+            'utah_1711_1806_validation_ppa_epa_pm25_1hr',
+            'utah_1711_1806_validation_ppa_epa_pm25_24hr',
+            'utah_1711_1806_validation_ppa_epa_pm25_6hr',
+            'utah_1711_1806_validation_ppa_epa_pm25_w_12hr',
+            'utah_1711_1806_validation_ppa_epa_pm25_w_1hr',
+            'utah_1711_1806_validation_ppa_epa_pm25_w_24hr',
+            'utah_1711_1806_validation_ppa_epa_pm25_w_6hr',
+            'utah_1711_1806_validation_ppa_ppa_pm25_12hr',
+            'utah_1711_1806_validation_ppa_ppa_pm25_1hr',
+            'utah_1711_1806_validation_ppa_ppa_pm25_24hr',
+            'utah_1711_1806_validation_ppa_ppa_pm25_6hr',
+            'utah_1711_1806_validation_ppa_ppa_pm25_w_12hr',
+            'utah_1711_1806_validation_ppa_ppa_pm25_w_1hr',
+            'utah_1711_1806_validation_ppa_ppa_pm25_w_24hr',
+            'utah_1711_1806_validation_ppa_ppa_pm25_w_6hr']
+    filter_stations = set([14])
 
     working_dir = os.getcwd()
     for d in dirs:
+        drop = filter_stations if "ppa_ppa" in d else None
         p = os.path.join(working_dir, d)
         months = os.listdir(p)
-        months = list(filter(lambda x: not (x.endswith(".txt") or x.endswith(".png") or x.endswith(".csv")), months))
+        months = list(
+            filter(lambda x: os.path.isdir( os.path.join(p ,x)) and x.startswith("utah"),
+                   months)
+        )
+        months.sort()
+        for month in months:
+            tmp_path = os.path.join(p, month, "prediction.csv")
+            print(d)
+            error_analysis(tmp_path, date_name="date_observed",
+                           prediction_name="predictions", ground_truth_name="value",
+                           sensor_name="station_id", drop_stations=drop)
+
+    working_dir = os.getcwd()
+    for d in dirs:
+        drop = filter_stations if "ppa_ppa" in d else None
+        p = os.path.join(working_dir, d)
+        months = os.listdir(p)
+        months = list(filter(lambda x: os.path.isdir(os.path.join(p, x)) and x.startswith("utah"), months))
         months.sort()
         file_names = []
         for month in months:
@@ -139,8 +166,10 @@ if __name__ == '__main__':
             file_names.append(tmp_path)
         df = pd.concat([pd.read_csv(f) for f in file_names])
         all_predictions_path=os.path.join(p, "all_predictions.csv")
+        if drop:
+            df.drop(df[df["station_id"].map(lambda x: x in drop)].index, inplace=True)
         df.to_csv(all_predictions_path)
 
         error_analysis(all_predictions_path, date_name="date_observed",
                        prediction_name="predictions", ground_truth_name="value",
-                       sensor_name="station_id")
+                       sensor_name="station_id", drop_stations=drop)
